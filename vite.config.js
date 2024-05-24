@@ -9,5 +9,7 @@ export default defineConfig({
       usePolling: true,
     }
   },
-
+  base: process.env.DEV
+    ? "/"
+    : "https://VNKRPVN.github.io/imgeditor/",
 })
