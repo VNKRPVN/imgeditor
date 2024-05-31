@@ -10,25 +10,16 @@
         class="filtration-preset"
         @change="applyPreset($event.target.value)"
       >
-        <option value="identity">
-          Тождественное отображение
-        </option>
+        <option value="identity">Тождественное отображение</option>
         <option value="sharpen">Повышение резкости</option>
-        <option value="gaussian">
-          Фильтр Гаусса
-        </option>
+        <option value="gaussian">Фильтр Гаусса</option>
         <option value="boxBlur">Прямоугольное размытие</option>
       </select>
-      <!-- <div class="filtration-content"> -->
       <div class="filtration-inputs">
         <div class="point-inputs">
-          <div
-            v-for="(row, rowIndex) in kernel"
-            class="point-inputs-column"
-            :key="rowIndex"
-          >
+          <div class="point-inputs-row" v-for="rowIndex in [0, 1, 2]" :key="rowIndex">
             <div
-              v-for="(value, colIndex) in row"
+              v-for="colIndex in [0, 1, 2]"
               :key="colIndex"
               class="point-with-prefix"
             >
@@ -64,7 +55,6 @@
           Сбросить
         </button>
       </div>
-      <!-- </div> -->
     </div>
   </div>
 </template>
@@ -154,24 +144,30 @@ export default defineComponent({
         imageData.height
       );
 
+      // Рассчитать сумму ядра
+      const kernelSum =
+        this.kernel.flat().reduce((sum, val) => sum + val, 0) || 1;
+
       // Свертка по каналам
       for (let y = 0; y < imageData.height; y++) {
         for (let x = 0; x < imageData.width; x++) {
-          for (let c = 0; c < 4; c++) {
-            // Каналы: R, G, B, A
+          for (let c = 0; c < 3; c++) {
+            // Каналы: R, G, B (без A)
             const outputIndex = (y * imageData.width + x) * 4 + c;
             let sum = 0;
-            let kernelSum = 0;
             for (let ky = 0; ky < 3; ky++) {
               for (let kx = 0; kx < 3; kx++) {
                 const inputIndex =
                   ((y + ky) * (imageData.width + 2) + (x + kx)) * 4 + c;
                 sum += paddedData[inputIndex] * this.kernel[ky][kx];
-                kernelSum += this.kernel[ky][kx];
               }
             }
-            newData[outputIndex] = sum / kernelSum;
+            // Нормализация и ограничение значений пикселей в диапазоне 0-255
+            newData[outputIndex] = Math.min(Math.max(sum / kernelSum, 0), 255);
           }
+          // Сохранение значения альфа-канала
+          newData[(y * imageData.width + x) * 4 + 3] =
+            imageData.data[(y * imageData.width + x) * 4 + 3];
         }
       }
 
@@ -184,11 +180,11 @@ export default defineComponent({
       const paddedHeight = height + 2;
       const paddedData = new Uint8ClampedArray(paddedWidth * paddedHeight * 4);
 
-      // Копирование исходных данных
+      // Копирование исходных данных с добавлением отступов
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const inputIndex = (y * width + x) * 4;
-          const outputIndex = ((y + 1) * paddedWidth + x + 1) * 4;
+          const outputIndex = ((y + 1) * paddedWidth + (x + 1)) * 4;
           paddedData.set(
             data.subarray(inputIndex, inputIndex + 4),
             outputIndex
@@ -196,7 +192,7 @@ export default defineComponent({
         }
       }
 
-      // Обработка краев
+      // Копирование краёв
       for (let y = 0; y < paddedHeight; y++) {
         for (let x = 0; x < paddedWidth; x++) {
           const outputIndex = (y * paddedWidth + x) * 4;
@@ -206,8 +202,8 @@ export default defineComponent({
             y === 0 ||
             y === paddedHeight - 1
           ) {
-            const nearestX = Math.max(1, Math.min(x, paddedWidth - 2));
-            const nearestY = Math.max(1, Math.min(y, paddedHeight - 2));
+            const nearestX = Math.min(Math.max(x, 1), paddedWidth - 2);
+            const nearestY = Math.min(Math.max(y, 1), paddedHeight - 2);
             const nearestIndex = (nearestY * paddedWidth + nearestX) * 4;
             paddedData.set(
               paddedData.subarray(nearestIndex, nearestIndex + 4),
@@ -216,6 +212,7 @@ export default defineComponent({
           }
         }
       }
+
       return paddedData;
     },
     applyFiltration() {
@@ -246,8 +243,8 @@ export default defineComponent({
   top: 40%;
   right: 20px;
   width: 200px;
-  height: 155px;
-  background: linear-gradient(to top right, #61ccbf, #ececec,);
+  height: 160px;
+  background: linear-gradient(to top right, #61ccbf, #ececec);
   display: flex;
   flex-direction: column;
   padding: 10px;
@@ -282,17 +279,20 @@ export default defineComponent({
     display: flex;
     flex-direction: column;
     align-items: center;
+
     .point-inputs {
       display: flex;
+      flex-direction: column;
       gap: 3px;
 
-      .point-inputs-column {
+      .point-inputs-row {
         display: flex;
-        flex-direction: column;
         gap: 3px;
       }
+
       .point-with-prefix {
         position: relative;
+
         input {
           height: 20px;
           width: 44px;
@@ -309,11 +309,13 @@ export default defineComponent({
     justify-content: center;
     align-items: center;
     gap: 3px;
+
     .filtration-button {
       height: 20px;
       width: auto;
       background: transparent;
       transition: 0.2s;
+
       &:hover {
         background: #27ccb9;
       }
@@ -337,6 +339,7 @@ export default defineComponent({
     position: absolute;
     opacity: 0;
     cursor: pointer;
+
     &:hover {
       border-color: #27ccb9;
     }

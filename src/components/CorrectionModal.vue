@@ -173,22 +173,22 @@ export default defineComponent({
           labels: Array.from({ length: 256 }, (_, i) => i),
           datasets: [
             {
-              label: "Red",
+              label: "Красный",
               data: redHistogram,
               backgroundColor: "rgba(255, 0, 0, 0.8)",
             },
             {
-              label: "Green",
+              label: "Зелёный",
               data: greenHistogram,
               backgroundColor: "rgba(0, 255, 0, 0.8)",
             },
             {
-              label: "Blue",
+              label: "Синий",
               data: blueHistogram,
               backgroundColor: "rgba(0, 0, 255, 0.8)",
             },
             {
-              label: "line",
+              label: "Линия",
               data: [
                 { x: 0, y: this.point1y },
                 { x: this.point1x, y: this.point1y },
@@ -325,8 +325,8 @@ export default defineComponent({
   position: absolute;
   top: 25%;
   right: 20px;
-  width: 200px;
-  height: 330px;
+  width: 220px;
+  height: 360px;
   background: linear-gradient(to top right, #61ccbf, #ececec,);
   display: flex;
   flex-direction: column;
