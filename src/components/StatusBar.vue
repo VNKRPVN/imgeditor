@@ -14,26 +14,22 @@
         @input="updateScale"
       />
     </div>
-    <!-- <div class="left-side"> -->
-      <!-- <div v-if="state"> State: {{ state }}</div> -->
-      <div v-if="imageWidth && imageHeight">
-        Ширина: {{ imageWidth }} Высота: {{ imageHeight }}
-      </div>
-      <div v-if="state === 'pipette' && pickedColor">
-        Цвет: {{ pickedColor }}
-      </div>
-      <div
-        v-if="state === 'pipette' && pickedColor"
-        class="pipette-color"
-        :style="{
-          background: pickedColor,
-        }"
-      ></div>
-      <div v-if="state === 'pipette' && pickedColor && xMouse && yMouse">
-        Коориднаты: {{ xMouse }}:{{ yMouse }}
-      </div>
-    <!-- </div> -->
-
+    <div v-if="imgLoaded && imageWidth !== null && imageHeight !== null && imageWidth !== 300 && imageHeight !== 150"> <!-- Изменено условие отображения -->
+      Ширина: {{ imageWidth }} Высота: {{ imageHeight }}
+    </div>
+    <div v-if="state === 'pipette' && pickedColor">
+      Цвет: {{ pickedColor }}
+    </div>
+    <div
+      v-if="state === 'pipette' && pickedColor"
+      class="pipette-color"
+      :style="{
+        background: pickedColor,
+      }"
+    ></div>
+    <div v-if="state === 'pipette' && pickedColor && xMouse !== null && yMouse !== null">
+      Координаты: {{ xMouse }}:{{ yMouse }}
+    </div>
   </div>
 </template>
 
@@ -50,6 +46,7 @@ export default defineComponent({
     xMouse: Number,
     yMouse: Number,
     scale: Number,
+    imgLoaded: Boolean, // Добавили этот параметр
   },
   methods: {
     updateScale(event) {
@@ -71,7 +68,6 @@ export default defineComponent({
   gap: 5px;
   justify-content: space-between;
   padding-bottom: 5px;
-  // padding-right: 5px;
 }
 
 .left-side {

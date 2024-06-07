@@ -12,7 +12,7 @@
       :newih="newih"
       :isShowCorrection="isShowCorrection"
       :isShowFiltration="isShowFiltration"
-      @updateImageSizes="updateImageSizes"
+      @updateImageSizes="handleUpdateImageSizes"
       @updateColor="updateColor"
       @updateCoordinates="updateCoordinates"
       @closeCorrection="closeCorrection"
@@ -28,6 +28,9 @@
       :xMouse="xMouse"
       :yMouse="yMouse"
       :scale="scale"
+      :canvasWidth="originalWidth"
+      :canvasHeight="originalHeight"
+      :imgLoaded="imgLoaded"
       @updateScale="(value) => (scale = value)"
     />
   </div>
@@ -64,21 +67,21 @@
             <label for="width" class="type" :style="{ right: '3px' }">
               {{ resizeUnit === "pixels" ? "px" : "%" }}
             </label>
-            <input id="width" :value="newiw" @change="updateNewiw" />
+            <input id="width" v-model.number="newiw" @change="updateNewiw" />
           </div>
           <div class="custom-checkbox">
             <input type="checkbox" v-model="bind" />
             <img
-            v-if="bind"
-            class="checkbox-image"
-            src="../assets/lock.png"
-            alt="Lock"
+              v-if="bind"
+              class="checkbox-image"
+              src="../assets/lock.png"
+              alt="Lock"
             />
             <img
-            v-else
-            class="checkbox-image"
-            src="../assets/unlock.png"
-            alt="Unlock"
+              v-else
+              class="checkbox-image"
+              src="../assets/unlock.png"
+              alt="Unlock"
             />
           </div>
           <div class="input-with-prefix">
@@ -86,7 +89,7 @@
             <label for="height" class="type" :style="{ right: '3px' }">
               {{ resizeUnit === "pixels" ? "px" : "%" }}
             </label>
-            <input id="height" :value="newih" @change="updateNewih" />
+            <input id="height" v-model.number="newih" @change="updateNewih" />
           </div>
         </div>
         <div class="sizes-counter">
@@ -148,11 +151,17 @@ export default defineComponent({
       yMouse: null,
       pickedColor: "",
       scale: 100,
+      originalWidth: 0,
+      originalHeight: 0,
+      imgLoaded: false, // Добавили это свойство
     };
   },
   emits: ["changeState"],
   mounted() {
-    this.canvasRef = this.$refs.canvas.getCanvasRef();
+    this.canvasRef = this.$refs.canvas ? this.$refs.canvas.getCanvasRef() : null;
+    if (this.canvasRef) {
+      this.updateImageSizes(this.canvasRef.width, this.canvasRef.height);
+    }
   },
   methods: {
     closeModal() {
@@ -174,6 +183,7 @@ export default defineComponent({
     updateImageSizes(iw, ih) {
       this.iw = iw;
       this.ih = ih;
+      this.imgLoaded = true; // Устанавливаем флаг загрузки изображения
     },
     updateColor(color) {
       this.pickedColor = color;
@@ -193,10 +203,10 @@ export default defineComponent({
         image.height = this.newih;
       }
       if (this.resizeUnit === "percentage") {
-        const { width, height } = this.canvasRef;
+        const { width, height } = this.origImg; // изменяем canvasRef на origImg
         const widthPercent = width / 100;
         const heightPercent = height / 100;
-        image.widht = this.newiw * widthPercent;
+        image.width = this.newiw * widthPercent;
         image.height = this.newih * heightPercent;
       }
       this.iw = image.width;
@@ -206,6 +216,9 @@ export default defineComponent({
       this.$emit("changeState", "");
     },
     updateModal() {
+      if (!this.canvasRef) {
+        return;
+      }
       if (this.resizeUnit === "pixels") {
         if (this.newiw === null) {
           this.newiw = this.iw;
@@ -238,7 +251,7 @@ export default defineComponent({
       if (!isNaN(num) && num > 0) {
         this.newiw = num;
 
-        if (this.canvasRef.width < num) {
+        if (this.canvasRef && this.canvasRef.width < num) {
           this.newiw = this.canvasRef.width;
         }
 
@@ -257,7 +270,7 @@ export default defineComponent({
       if (!isNaN(num) && num > 0) {
         this.newih = num;
 
-        if (this.canvasRef.height < num) {
+        if (this.canvasRef && this.canvasRef.height < num) {
           this.newih = this.canvasRef.height;
         }
 
@@ -304,12 +317,11 @@ export default defineComponent({
       this.newImg = clear;
     },
     updateNewImgData(data) {
-      // const clear = new Image();
-      // clear.width = this.newImg.width;
-      // clear.height = this.newImg.height;
-      // clear.src = this.newImg.src;
-      // clear.data = data;
       this.newImg.data = data;
+    },
+    handleUpdateImageSizes(iw, ih) {
+      this.originalWidth = iw;
+      this.originalHeight = ih;
     },
   },
   watch: {
@@ -343,10 +355,14 @@ export default defineComponent({
       this.newiw = null;
       this.newih = null;
       this.scale = 100;
+      this.imgLoaded = false; // Сбрасываем флаг загрузки
 
       this.origImg = new Image();
       this.origImg.src = this.img;
-      this.newImg = this.origImg;
+      this.origImg.onload = () => {
+        this.newImg = this.origImg;
+        this.updateImageSizes(this.origImg.width, this.origImg.height);
+      };
     },
     isShowModal(newValue) {
       if (newValue) {
@@ -363,6 +379,7 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  height: 100vh; /* добавили, чтобы canvas занимал весь экран */
 }
 
 .modal {
@@ -388,7 +405,6 @@ export default defineComponent({
 .measurements-wrapper {
   display: flex;
   gap: 1px;
-  // margin-top: 10px;
 }
 
 .sizes {

@@ -97,31 +97,34 @@ export default defineComponent({
     },
     drawImage(newImg) {
       const canvas = this.canvasRef;
-      const ctx = this.canvasRef?.getContext("2d");
-      const img = newImg ?? new Image();
+      const ctx = canvas.getContext("2d");
+      const img = newImg || new Image();
+
       img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        canvas.width = this.canvasRef.clientWidth;
-        canvas.height = this.canvasRef.clientHeight;
-        ctx.imageSmoothingEnabled = false;
+        if (
+          img.width > 0 &&
+          img.height > 0 &&
+          canvas.width > 0 &&
+          canvas.height > 0
+        ) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.width = canvas.clientWidth; // Устанавливаем ширину канваса обратно
+          canvas.height = canvas.clientHeight; // Устанавливаем высоту канваса обратно
 
-        const [dx, dy, iw, ih] = this.getImageSizes(canvas, img);
-        const imageData = ctx.getImageData(dx, dy, iw, ih);
-        if (this.imageData instanceof ImageData) {
-          const interpolatedData = this.interpolationCb(imageData, ~~iw, ~~ih);
-          if (interpolatedData !== null) {
-            ctx.putImageData(interpolatedData, dx, dy);
-          }
-        } else {
+          const [dx, dy, iw, ih] = this.getImageSizes(canvas, img);
+
+          ctx.imageSmoothingEnabled = false;
           ctx.drawImage(img, dx, dy, iw, ih);
+          this.offsetX = dx;
+          this.offsetY = dy;
+          this.iw = iw;
+          this.ih = ih;
+          this.$emit("updateImageSizes", iw, ih);
+        } else {
+          console.error("Image or canvas size is zero");
         }
-
-        this.offsetX = dx;
-        this.offsetY = dy;
-        this.iw = iw;
-        this.ih = ih;
-        this.$emit("updateImageSizes", iw, ih);
       };
+
       img.src = this.newImg.src;
     },
     moveImage() {
@@ -278,7 +281,13 @@ export default defineComponent({
       return [~~xMouse, ~~yMouse];
     },
     saveImage() {
-      const imageDataURL = this.canvasRef.toDataURL("image/png");
+      const canvas = document.createElement('canvas');
+      canvas.width = this.iw;
+      canvas.height = this.ih;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(this.newImg, 0, 0, this.iw, this.ih);
+      
+      const imageDataURL = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = imageDataURL;
       link.download = "my_image.png";
